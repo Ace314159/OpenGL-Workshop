@@ -33,6 +33,9 @@ int main() {
     });
 
     while (!glfwWindowShouldClose(window)) {
+        glClearColor(0.53, 0.81, 0.92, 1);
+        glClear(GL_COLOR_BUFFER_BIT);
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
