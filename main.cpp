@@ -1,17 +1,23 @@
 #include <iostream>
+#include <vector>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-GLuint createVAO() {
-    float vertices[] = {
-            0.5f, 0.5f, 0.0f,  // top right
-            0.5f, -0.5f, 0.0f,  // bottom right
-            -0.5f, -0.5f, 0.0f,  // bottom left
-            -0.5f, 0.5f, 0.0f   // top left
+struct Vertex {
+    float position[3];
+    float color[3];
+};
+
+std::pair<GLuint, GLsizei> createVAO() {
+    std::vector<Vertex> vertices{
+            {{0.5f,  0.5f,  0.0f}, {1.0f, 0.0f, 0.0f}},  // top right
+            {{0.5f,  -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}},  // bottom right
+            {{-0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}},  // bottom left
+            {{-0.5f, 0.5f,  0.0f}, {1.0f, 0.0f, 0.0f}}   // top left
     };
 
-    GLuint indices[] = {
+    std::vector<GLuint> indices{
             0, 1, 3,   // first triangle
             1, 2, 3    // second triangle
     };
@@ -25,19 +31,23 @@ GLuint createVAO() {
     GLuint VBO;
     glGenBuffers(1, &VBO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(vertices[0]) * vertices.size()), vertices.data(),
+                 GL_STATIC_DRAW);
 
     // Create and set data to EBO
     GLuint EBO;
     glGenBuffers(1, &EBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(indices[0]) * indices.size()), indices.data(),
+                 GL_STATIC_DRAW);
 
     // Configure vertex attributes
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *) 0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *) offsetof(Vertex, position));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *) offsetof(Vertex, color));
     glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
 
-    return VAO;
+    return {VAO, indices.size()};
 }
 
 GLuint createShaderProgram() {
@@ -45,17 +55,22 @@ GLuint createShaderProgram() {
     const char *vertexShaderSrc = R"delim(
 #version 330 core
 layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aColor;
+
+out vec3 outColor;
 
 void main() {
     gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+    outColor = aColor;
 }
 )delim";
     const char *fragmentShaderSrc = R"delim(
 #version 330 core
+in vec3 outColor;
 out vec4 FragColor;
 
 void main() {
-    FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
+    FragColor = vec4(outColor, 1.0f);
 }
 )delim";
 
@@ -110,7 +125,7 @@ int main() {
         glViewport(0, 0, width, height);
     });
 
-    GLuint VAO = createVAO();
+    const auto [VAO, numIndices] = createVAO();
     GLuint shaderProgram = createShaderProgram();
 
     while (!glfwWindowShouldClose(window)) {
@@ -122,7 +137,7 @@ int main() {
         // Use Shader
         glUseProgram(shaderProgram);
         // Draw
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, 0);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
