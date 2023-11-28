@@ -4,23 +4,11 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-struct Vertex {
-    float position[3];
-    float color[3];
-};
+#include "WorldGen.h"
 
 std::pair<GLuint, GLsizei> createVAO() {
-    std::vector<Vertex> vertices{
-            {{0.5f,  0.5f,  0.0f}, {1.0f, 0.0f, 0.0f}},  // top right
-            {{0.5f,  -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}},  // bottom right
-            {{-0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}},  // bottom left
-            {{-0.5f, 0.5f,  0.0f}, {1.0f, 0.0f, 0.0f}}   // top left
-    };
 
-    std::vector<GLuint> indices{
-            0, 1, 3,   // first triangle
-            1, 2, 3    // second triangle
-    };
+    const auto& [vertices, indices] = makeVertexData();
 
     // Create VAO
     GLuint VAO;
@@ -42,7 +30,7 @@ std::pair<GLuint, GLsizei> createVAO() {
                  GL_STATIC_DRAW);
 
     // Configure vertex attributes
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *) offsetof(Vertex, position));
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *) offsetof(Vertex, position));
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *) offsetof(Vertex, color));
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
@@ -54,13 +42,13 @@ GLuint createShaderProgram() {
     // Shader Source
     const char *vertexShaderSrc = R"delim(
 #version 330 core
-layout (location = 0) in vec3 aPos;
+layout (location = 0) in vec4 aPos;
 layout (location = 1) in vec3 aColor;
 
 out vec3 outColor;
 
 void main() {
-    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+    gl_Position = aPos;
     outColor = aColor;
 }
 )delim";
@@ -124,13 +112,14 @@ int main() {
     glfwSetFramebufferSizeCallback(window, [](GLFWwindow *window, int width, int height) {
         glViewport(0, 0, width, height);
     });
+    glEnable(GL_DEPTH_TEST);
 
     const auto [VAO, numIndices] = createVAO();
     GLuint shaderProgram = createShaderProgram();
 
     while (!glfwWindowShouldClose(window)) {
         glClearColor(0.53, 0.81, 0.92, 1);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Bind VAO
         glBindVertexArray(VAO);
