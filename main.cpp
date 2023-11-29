@@ -4,6 +4,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#define GLM_ENABLE_EXPERIMENTAL
 #include "WorldGen.h"
 
 std::pair<GLuint, GLsizei> createVAO() {
@@ -45,10 +46,13 @@ GLuint createShaderProgram() {
 layout (location = 0) in vec4 aPos;
 layout (location = 1) in vec3 aColor;
 
+uniform mat4 proj;
+uniform mat4 view;
+
 out vec3 outColor;
 
 void main() {
-    gl_Position = aPos;
+    gl_Position = proj * view * aPos;
     outColor = aColor;
 }
 )delim";
@@ -117,9 +121,55 @@ int main() {
     const auto [VAO, numIndices] = createVAO();
     GLuint shaderProgram = createShaderProgram();
 
+    int projLoc = glGetUniformLocation(shaderProgram, "proj");
+    int viewLoc = glGetUniformLocation(shaderProgram, "view");
+    glUseProgram(shaderProgram);
+    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projMat));
+
+    double yaw = -90, pitch = 45;
+    glm::mat4 viewMat(1);
+    double prevX = 0, prevY = 0;
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    auto callback = [&prevX, &prevY, &yaw, &pitch, &viewMat](double x, double y) {
+        double sensitivity = 0.1;
+        double dX = (x - prevX) * sensitivity;
+        double dY = -(y - prevY) * sensitivity;
+        prevX = x;
+        prevY = y;
+
+        yaw += dX;
+        pitch += dY;
+        if(pitch > 89) pitch = 89;
+        else if(pitch < -89) pitch = -89;
+
+        const glm::vec3 front = glm::normalize(glm::vec3(
+                cos(glm::radians(pitch)) * cos(glm::radians(yaw)),
+                sin(glm::radians(pitch)),
+                cos(glm::radians(pitch)) * sin(glm::radians(yaw))
+        ));
+        const glm::vec3 up{0, 1, 0};
+        viewMat = glm::lookAt(pos, pos + front, up);
+    };
+    glfwSetWindowUserPointer(window, &callback);
+    glfwSetCursorPosCallback(window, [](GLFWwindow* window, double x, double y) {
+        auto callbackPtr = static_cast<decltype(&callback)>(glfwGetWindowUserPointer(window));
+        (*callbackPtr)(x, y);
+    });
+    glfwSetWindowFocusCallback(window, [](GLFWwindow* window, int focused) {
+        if (focused) {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        }
+    });
+
     while (!glfwWindowShouldClose(window)) {
         glClearColor(0.53, 0.81, 0.92, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(viewMat));
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+            std::cout << glm::to_string(viewMat) << std::endl;
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        }
 
         // Bind VAO
         glBindVertexArray(VAO);

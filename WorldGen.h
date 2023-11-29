@@ -51,7 +51,7 @@ constexpr glm::vec3 GREEN = {0.365, 0.486, 0.082};
 const glm::mat4 projMat = glm::perspective(glm::radians(45.0), 800.0 / 600.0,
                                            0.1, 2000.0);
 const glm::vec3 pos{-129.906143, 110.205849, 3.054655};
-const glm::mat4 viewMat = glm::lookAt(pos, {-130.774033, 109.952087, 3.481709}, {0.000000, 1.000000, 0.000000});
+//const glm::mat4 viewMat = glm::lookAt(pos, {-130.774033, 109.952087, 3.481709}, {0.000000, 1.000000, 0.000000});
 
 std::pair<std::vector<Vertex>, std::vector<GLuint>> makeVertexData() {
     std::vector<Vertex> vertices;
@@ -77,7 +77,8 @@ std::pair<std::vector<Vertex>, std::vector<GLuint>> makeVertexData() {
                 indices.push_back(faceStartI + 3);
                 for (auto vecPos: face) {
                     vecPos += glm::vec3{x, y, z};
-                    vertices.push_back({glm::vec4{projMat * viewMat * glm::vec4(vecPos, 1)}, color});
+//                    vertices.push_back({glm::vec4{projMat * viewMat * glm::vec4(vecPos, 1)}, color});
+                    vertices.push_back({glm::vec4(vecPos, 1), color});
                 }
             }
         }
