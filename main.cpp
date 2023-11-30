@@ -27,7 +27,9 @@ int main() {
         return -1;
     }
 
-    glViewport(0, 0, 800, 600);
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+    glViewport(0, 0, width, height);
     glfwSetFramebufferSizeCallback(window, [](GLFWwindow *window, int width, int height) {
         glViewport(0, 0, width, height);
     });
